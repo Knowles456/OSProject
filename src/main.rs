@@ -10,7 +10,7 @@ fn main() {
     //PART A PHASE 3 (Deadlock Scenario):
     println!("\n=== DEADLOCK SCENARIO ===");
     
-    // Thread 1 will attempt to lock in the order of recipe then extras
+    // Thread 1 will attempt to lock in the order of recipe then extras. CLone to give thread shared ownership
     let recipe1 = Arc::clone(&recipe);
     let extra1 = Arc::clone(&extra_ingredients);
     let thread1 = thread::spawn(move || {
@@ -20,12 +20,14 @@ fn main() {
         println!("Thread 1: Got recipe lock");
         
         recipe_list.push("Captain Crunch".to_string());
+        println!("Thread 1: Added Captain Crunch to recipe");
+
         // Timer that ensures thread 2 has already grabbed the extra ingredients lock before thread 1, ensuring deadlock
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(Duration::from_millis(500));
         
         // Try to get extra ingredients while still holding recipe lock
-        println!("Thread 1: Trying to lock extra ingredients (while holding recipe lock)");
-        // This will deadlock if Thread 2 has the extra ingredients lock
+        println!("Thread 1: Attempting to get extra ingredients lock");
+        // Match the response of the try_lock function to see if deadlock occurs or
         match extra1.try_lock() {
             //happens if there is no deadlock
             Ok(mut list) => {
@@ -34,7 +36,7 @@ fn main() {
             },
             Err(_) => {
                 println!("Thread 1: DEADLOCK DETECTED - Could not get extra ingredients lock");
-                // Potential deadlock detected by using try_lock instead of lock
+                // Potential deadlock detected 
             }
         }
     });
@@ -44,16 +46,18 @@ fn main() {
     let extra2 = Arc::clone(&extra_ingredients);
     let thread2 = thread::spawn(move || {
         // Get extra ingredients lock first
-        println!("Thread 2: Trying to lock extra ingredients");
-        let _grab_extra = extra2.lock().unwrap();
+        println!("Thread 2: Attempting to get extra ingredients lock");
+        let mut grab_extra = extra2.lock().unwrap();
         println!("Thread 2: Got extra ingredients lock");
+
+        grab_extra.push("Salt".to_string());
+        println!("Thread 2: Added Salt to extras");
         
-        // Don't release extra lock! This will cause deadlock
-        thread::sleep(Duration::from_millis(100));
+        thread::sleep(Duration::from_millis(500));
         
         // Try to get recipe while still holding extra ingredients lock
         println!("Thread 2: Trying to lock recipe (while holding extra ingredients lock)");
-        // This will deadlock if Thread 3 has the recipe lock
+        // This will deadlock if Thread 1 has the recipe lock
         match recipe2.try_lock() {
             Ok(mut list) => {
                 list.push("Baking Powder".to_string());
@@ -80,7 +84,7 @@ fn main() {
     extra_ingredients.lock().unwrap().clear();
     
     //PART A PHASE 4 (Deadlock Resolution):
-    println!("=== NORMAL SCENARIO (Deadlock Resolution) ===");
+    println!("\n=== NORMAL SCENARIO (Deadlock Resolution) ===");
     
     // Thread 3
     let recipe3 = Arc::clone(&recipe);
@@ -146,7 +150,7 @@ fn main() {
     thread4.join().unwrap();
     
     // Print results
-    println!("Recipe: {:?}", recipe.lock().unwrap());
+    println!("\nRecipe: {:?}", recipe.lock().unwrap());
     println!("Extras: {:?}", extra_ingredients.lock().unwrap());
     
 }
