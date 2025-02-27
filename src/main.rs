@@ -16,14 +16,14 @@ fn main() {
         "Milk".to_string(),
     ];
 
-    // handles vector is declared to store the threads about to be made
-    let mut handles = vec![];
+    // threads vector is declared to store the threads about to be made
+    let mut threads = vec![];
     for ingredient in ingredients {
         // Clone the Arc from original recipe vector so new thread can write to it's place in memory
         let recipe_clone = Arc::clone(&recipe);
 
         // Spawn a new thread, with move command to transfer by value and not reference into it's closure, allowing the value of ingredient[i] and recipe_clone to not be lost if the loop goes faster than the thread
-        let handle = thread::spawn(move || {
+        let thread = thread::spawn(move || {
             println!("Adding {} to recipe...", ingredient);
 
             // Pause for dramatic effect/to ensure threads have to wait on another for access to the recipe list. Acquires (or blocks depending on unwrap) the mutex lock 
@@ -34,12 +34,12 @@ fn main() {
             // lock releases here automatically as recipe_list goes out of scope
         });
 
-        handles.push(handle);
+        threads.push(thread);
     }
 
     // Checks each thread sequentially to ensure they have finished before moving to print statement
-    for handle in handles {
-        handle.join().unwrap();
+    for thread in threads {
+        thread.join().unwrap();
     }
 
     // Grabs the lock on recipe vector and assigns it to final_recipe to print
